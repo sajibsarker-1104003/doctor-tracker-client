@@ -1,36 +1,23 @@
-"use client";
+import { Suspense } from "react";
+import DoctorPatients from "./doctor-patients";
 
-import { use } from "react";
-import { usePatients } from "@/features/patients/use-patients";
+export default function DoctorPatientsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={<PatientsSkeleton />}>
+      <DoctorPatients params={params} />
+    </Suspense>
+  );
+}
 
-export default function DoctorPatientsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const { data, isLoading } = usePatients({ doctorId: id, limit: 20 });
-
+function PatientsSkeleton() {
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Doctor's Patients</h1>
-      <div className="rounded-lg border bg-card">
-        <table className="w-full text-sm">
-          <thead className="bg-muted">
-            <tr>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Condition</th>
-              <th className="p-3 text-left">Age</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && <tr><td colSpan={3} className="p-6 text-center">Loading…</td></tr>}
-            {data?.data.map((p) => (
-              <tr key={p.id} className="border-t">
-                <td className="p-3">{p.name}</td>
-                <td className="p-3">{p.condition}</td>
-                <td className="p-3">{p.age}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <div className="h-8 w-56 animate-pulse rounded bg-muted" />
+      <div className="h-40 w-full animate-pulse rounded-lg border bg-muted" />
     </div>
   );
 }

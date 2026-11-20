@@ -1,15 +1,28 @@
 "use client";
 
-// Tells Next.js to render this page dynamically, bypassing static prerender issues
-export const dynamic = 'force-dynamic';
-
-import { use, useState } from "react";
+import { Suspense, use, useState } from "react";
 import Link from "next/link";
 import { usePatients, useDeletePatient } from "@/features/patients/use-patients";
 import { Modal } from "@/components/ui/modal";
 import { PatientForm } from "@/features/patients/patient-form";
 
+// 1. The default export now only renders the Suspense boundary.
+//    It does NOT await params or call hooks that depend on it.
 export default function DoctorPatientsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={<div className="p-6 text-center">Loading doctor data...</div>}>
+      <DoctorPatientsContent params={params} />
+    </Suspense>
+  );
+}
+
+// 2. The actual content is in a separate component.
+//    It receives the params promise and unwraps it here, inside Suspense.
+function DoctorPatientsContent({
   params,
 }: {
   params: Promise<{ id: string }>;
