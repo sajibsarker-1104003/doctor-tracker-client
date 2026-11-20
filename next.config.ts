@@ -4,8 +4,6 @@ import path from "node:path";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-
-  // Pin Turbopack's root to this project so it stops scanning $HOME.
   turbopack: {
     root: path.resolve(__dirname),
     rules: {
@@ -15,12 +13,14 @@ const nextConfig: NextConfig = {
       },
     },
   },
-
   async rewrites() {
+    // Render-এ BACKEND_URL environment variable থেকে আসবে
+    // লোকাল ডেভেলপমেন্টে fallback হিসেবে localhost:8080 ব্যবহার হবে
+    const backendUrl = process.env.BACKEND_URL || "http://localhost:8080";
     return [
       {
         source: "/api/v1/:path*",
-        destination: "http://localhost:8080/api/v1/:path*",
+        destination: `${backendUrl}/api/v1/:path*`,
       },
     ];
   },
