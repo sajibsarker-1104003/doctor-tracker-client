@@ -1,5 +1,8 @@
 "use client";
 
+// Tells Next.js to render this page dynamically, bypassing static prerender issues
+export const dynamic = 'force-dynamic';
+
 import { use, useState } from "react";
 import Link from "next/link";
 import { usePatients, useDeletePatient } from "@/features/patients/use-patients";
@@ -77,6 +80,13 @@ export default function DoctorPatientsPage({
                 </td>
               </tr>
             ))}
+            {!isLoading && data?.data.length === 0 && (
+              <tr>
+                <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                  No patients found for this doctor.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
