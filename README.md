@@ -1,243 +1,234 @@
-# Doctor Tracker -- Frontend Client
+# Doctor Tracker — Frontend Client
 
 ## 📖 Elevator Pitch
 
-Doctor Tracker is a secure, high-performance administrative dashboard
-built to manage doctors and their patients. Designed with a focus on
-clean UX, data visualization, and optimized data-fetching strategies,
-the application allows administrators to seamlessly create, edit, and
-manage records.
+Doctor Tracker is a secure administrative dashboard for managing doctors and their patients. Built with the Next.js App Router, it gives administrators a fast, responsive interface to create, edit and organise records, explore analytics (patient intake trends, condition distribution, doctor workload) and stay signed in safely through a JWT + refresh-token flow. A server-side proxy keeps all API traffic on a single origin, and TanStack Query keeps every list, count and chart in sync without full page reloads.
 
-By leveraging Next.js App Router, server-side proxying, and client-side
-caching, the app delivers a smooth, responsive experience while securely
-handling authentication flows (JWT + refresh tokens) and scalable REST
-API pagination.
-
-------------------------------------------------------------------------
+---
 
 ## 🚀 Tech Stack
 
-  -----------------------------------------------------------------------
-  Layer                   Choice                  Role
-  ----------------------- ----------------------- -----------------------
-  **Framework**           Next.js 16 (App Router) Routing, Server/Client
-                                                  Components, API
-                                                  proxying
+| Layer | Choice | Role |
+| --- | --- | --- |
+| **Framework** | Next.js 16 (App Router) | Routing, Server/Client Components, API proxying |
+| **Language** | TypeScript | Strict typing and scalable architecture |
+| **Styling** | Tailwind CSS v4 | Utility-first CSS, responsive layouts |
+| **UI Components** | shadcn/ui + custom components | Accessible primitives, plus custom `Modal` and `ConfirmDialog` |
+| **Data Fetching** | TanStack Query (React Query) v5 | Server-state management, caching, background refetching |
+| **Charts** | Recharts | Bar, donut, area and composed charts |
+| **Icons** | HugeIcons / Lucide / inline SVG | Icon set |
+| **Tooling** | Yarn, ESLint, Prettier, Husky | Package management, linting, formatting, Git hooks |
 
-  **Language**            TypeScript              Strict typing and
-                                                  scalable architecture
-
-  **Styling**             Tailwind CSS v4         Utility-first CSS
-                                                  framework
-
-  **UI Components**       shadcn/ui               Accessible, reusable
-                                                  components (dialogs,
-                                                  tables, etc.)
-
-  **Data Fetching**       TanStack Query (React   Server-state
-                          Query) v5               management, caching,
-                                                  background refetching
-
-  **Charts**              Recharts                Declarative data
-                                                  visualization (bar,
-                                                  pie, and area charts)
-
-  **Icons**               HugeIcons / Lucide      SVG icon library
-
-  **Tooling**             Yarn, ESLint, Prettier, Package management,
-                          Husky                   linting, formatting,
-                                                  and Git hooks
-  -----------------------------------------------------------------------
-
-------------------------------------------------------------------------
+---
 
 ## 🏗️ System Architecture
 
-The frontend is a standalone Next.js application that communicates with
-a NestJS backend and MongoDB database.
+The frontend is a standalone Next.js application. It talks to a NestJS REST API (port `8080`), which stores data in MongoDB.
 
-### Data Flow & Interactions
+### Data flow
 
-1.  **API Proxying:** The browser does not communicate directly with the
-    backend port (`:8080`). Instead, requests are sent to `/api/v1/*` on
-    the Next.js server (`:3000`), which proxies them to the backend
-    using `next.config.ts` rewrites. This helps avoid browser CORS
-    issues and keeps API requests on the frontend origin.
-2.  **Authentication Flow:**
-    -   On login, the backend returns an `accessToken` (short-lived) and
-        a `refreshToken` (long-lived).
-    -   The frontend stores the access token in memory (and
-        `sessionStorage` for page reloads) and stores the refresh token
-        in a cookie.
-    -   A custom `apiClient` wrapper intercepts `401 Unauthorized`
-        responses, queues concurrent requests, calls `/auth/refresh`,
-        and retries failed requests.
-3.  **State Management:** TanStack Query manages server state. Queries
-    are cached and invalidated as needed. For example, creating a
-    patient invalidates `["patients"]`, `["doctors"]` (to refresh
-    patient counts), and `["dashboard"]` (to refresh analytics).
-4.  **Route Protection:** A `proxy.ts` file protects dashboard
-    navigation. Users without a session cookie are redirected to
-    `/login`.
+1. **API proxying.** The browser never calls the backend directly. Requests go to `/api/v1/*` on the Next.js server (`:3000`), and `next.config.ts` rewrites them to `BACKEND_URL` (default `http://localhost:8080`). All API traffic stays on the frontend origin, which avoids CORS issues.
+2. **Authentication.**
+   - On login the backend returns a short-lived `accessToken` and a long-lived `refreshToken`.
+   - The access token is kept in memory (and in `sessionStorage` so it survives a reload). The refresh token is stored in a cookie.
+   - A custom `apiClient` wrapper attaches the `Authorization: Bearer` header, intercepts `401` responses, queues concurrent requests, calls `/auth/refresh` once, then retries everything that failed.
+3. **State management.** TanStack Query owns server state. Mutations invalidate related queries. For example, creating a patient invalidates `["patients"]`, `["doctors"]` (patient counts) and `["dashboard"]` (analytics).
+4. **Route protection.** `proxy.ts` redirects users without a session cookie from `/dashboard/*` to `/login`. The backend remains the source of truth for authorisation.
 
-### Architecture Diagram
+### Architecture diagram
 
-``` mermaid
+```mermaid
 flowchart LR
-    Browser[Browser :3000] -->|Fetch /api/v1| Next[Next.js Proxy]
-    Next -->|Rewrite to :8080| BE[NestJS Backend]
-    BE --> DB[(MongoDB)]
-
-    Browser -.->|Auth 401| Client[apiClient Wrapper]
-    Client -->|Refresh Token| Next
-    Next -->|New Tokens| Client
-    Client -->|Retry Original Request| Browser
+    Browser["Browser<br/>(React UI + TanStack Query)"] -->|"fetch /api/v1/*"| Next["Next.js :3000<br/>rewrite proxy"]
+    Next -->|"rewrite to BACKEND_URL"| API["NestJS API :8080<br/>JWT guard"]
+    API --> DB[("MongoDB")]
+    Next -. "proxy.ts: no session cookie" .-> Login["/login"]
 ```
 
-------------------------------------------------------------------------
+### Silent token refresh
+
+```mermaid
+sequenceDiagram
+    participant UI as React UI
+    participant C as apiClient
+    participant N as Next.js proxy
+    participant A as NestJS API
+
+    UI->>C: request (Bearer accessToken)
+    C->>N: GET /api/v1/doctors
+    N->>A: forward
+    A-->>C: 401 (token expired)
+    C->>N: POST /api/v1/auth/refresh (refresh cookie)
+    N->>A: forward
+    A-->>C: new accessToken
+    C->>N: retry original request
+    N->>A: forward
+    A-->>UI: 200 + data
+```
+
+---
 
 ## 🛠️ Setup Guide
 
 ### Prerequisites
 
--   Node.js (v18 or higher)
--   Yarn (`npm install -g yarn`)
--   Doctor Tracker backend running at `http://localhost:8080`
+- Node.js **v20.9 or higher** (required by Next.js 16)
+- Yarn (`npm install -g yarn`)
+- The Doctor Tracker backend running locally at `http://localhost:8080` (see the `doctor-tracker-api` repository for its own setup)
 
-### Local Installation
+### Local installation
 
-1.  **Clone the repository:**
+1. **Clone the repository**
 
-    ``` bash
-    git clone <your-repo-url>
-    cd doctor-tracker-client
-    ```
+   ```bash
+   git clone <your-repo-url>
+   cd doctor-tracker-client
+   ```
 
-2.  **Install dependencies:**
+2. **Install dependencies**
 
-    ``` bash
-    yarn install
-    ```
+   ```bash
+   yarn install
+   ```
 
-3.  **Configure environment variables:**
+3. **Configure environment variables**
 
-    Create a `.env.local` file in the project root. You can copy
-    `.env.example`:
+   Copy the committed example file and adjust it if your backend runs elsewhere:
 
-    ``` bash
-    cp .env.example .env.local
-    ```
+   ```bash
+   cp .env.example .env.local
+   ```
 
-    Set the following value:
+   | Variable | Required | Description |
+   | --- | --- | --- |
+   | `NEXT_PUBLIC_API_BASE_URL` | Yes | Base path the browser calls. Keep it as `/api/v1` so requests go through the Next.js proxy. |
+   | `BACKEND_URL` | Yes in production, optional locally | Absolute URL of the NestJS API that `/api/v1/*` is proxied to. Defaults to `http://localhost:8080`. |
 
-    ``` env
-    NEXT_PUBLIC_API_BASE_URL=/api/v1
-    ```
+   > **Note:** `BACKEND_URL` is read in `next.config.ts` when the app is built, so it must be set **before** `yarn build` in deployed environments.
 
-    > **Note:** Use `/api/v1` rather than the absolute backend URL so
-    > requests are routed through the Next.js proxy.
+4. **Start the development server**
 
-4.  **Run the development server:**
+   ```bash
+   yarn dev
+   ```
 
-    ``` bash
-    yarn dev
-    ```
+5. **Open the app**
 
-5.  **Open the application:**
+   Visit <http://localhost:3000> and sign in with an account from your backend's seed data (for example `admin@example.com` / `Admin@12345`, if your seed creates it). These are demo credentials only; never reuse them in production.
 
-    Visit <http://localhost:3000> in your browser. Use the seeded
-    credentials provided by your backend environment (for example,
-    `admin@example.com / Admin@12345`, if configured).
+### `.env.example`
 
-------------------------------------------------------------------------
+This file is committed to the repository root:
+
+```env
+# Base path the browser uses for API calls.
+# Keep it relative so requests go through the Next.js rewrite proxy (no CORS).
+NEXT_PUBLIC_API_BASE_URL=/api/v1
+
+# Where Next.js proxies /api/v1/* to. Read at BUILD time in next.config.ts.
+# Local development: the NestJS API on port 8080.
+# Production (e.g. Render): your deployed API URL, without a trailing slash.
+BACKEND_URL=http://localhost:8080
+```
+
+### Deployment notes (Render)
+
+1. Deploy the NestJS API first and copy its public URL.
+2. On the frontend service, set `BACKEND_URL` to that URL and `NEXT_PUBLIC_API_BASE_URL=/api/v1` **before the build starts**.
+3. Redeploy the frontend whenever `BACKEND_URL` changes, because the rewrite target is baked in at build time.
+
+---
 
 ## 🧠 Technical Decisions
 
-### 1. Why Proxy Rewrites Instead of Direct API Calls?
+### 1. Proxy rewrites instead of direct browser-to-API calls
 
-**Decision:** Configure `next.config.ts` to proxy `/api/v1` traffic to
-the backend at `http://localhost:8080`, rather than having the browser
-call port `8080` directly.
+**Context.** The frontend (`:3000`) and the API (`:8080`) are different origins, and the API issues JWTs plus a refresh-token cookie.
 
-**Reasoning:** Requests routed through the Next.js origin can simplify
-cross-origin request handling and reduce CORS complications. Cookie
-behavior still depends on the cookie's attributes (`SameSite`, `Secure`,
-`HttpOnly`, and `Domain`) and the proxy/backend configuration, so those
-settings must be configured appropriately.
+**Options considered**
 
-**Trade-off:** Adds an internal server hop and a small amount of
-latency, but centralizes API routing and simplifies the browser-facing
-architecture.
+| Option | Verdict |
+| --- | --- |
+| Browser calls the API directly with CORS enabled on NestJS | Needs an exact allowed-origin list per environment, `credentials: true`, and `SameSite=None; Secure` cookies across origins. Easy to misconfigure. |
+| Custom Next.js route handlers as a backend-for-frontend | Maximum control, but every endpoint has to be re-implemented or forwarded by hand. |
+| **`rewrites()` in `next.config.ts` (chosen)** | One config block forwards every `/api/v1/*` request to the backend. |
 
-### 2. Why TanStack Query Instead of Standard `useEffect`?
+**Decision.** Proxy `/api/v1/*` to `BACKEND_URL` using Next.js rewrites. The browser only ever sees the frontend origin.
 
-**Decision:** Use `@tanstack/react-query` for data fetching, mutations,
-and caching.
+**Why it works for this project.** There is no cross-origin traffic to configure, so no CORS preflights. The API base URL is the relative path `/api/v1` everywhere in the code, so swapping environments is a single environment variable.
 
-**Reasoning:** The application requires pagination, searching, and
-filtering. Managing these concerns manually with `useEffect` and
-`useState` can introduce race conditions, duplicate API calls, and
-inconsistent loading states. TanStack Query provides request
-deduplication, background refetching, pagination support (including
-`placeholderData: keepPreviousData`), and query invalidation.
+**Trade-offs**
 
-For example, creating a patient can invalidate patient, doctor, and
-dashboard queries so related counts and charts refresh without a full
-page reload.
+- Each request makes an extra internal hop through the Next.js server (a small amount of latency).
+- The rewrite destination is resolved at **build** time, so changing `BACKEND_URL` means rebuilding the frontend.
+- Cookie behaviour still depends on the cookie's `SameSite`, `Secure`, `HttpOnly` and `Domain` attributes, so these must still be configured correctly.
 
-**Trade-off:** Adds some bundle weight, but provides substantial
-improvements in maintainability and user experience.
+### 2. TanStack Query instead of `useEffect` + `useState`
 
-------------------------------------------------------------------------
+**Context.** Almost every screen is server state: paginated and searchable lists, dependent counts, and analytics charts that must stay consistent with each other.
 
-## ✨ Core Features Implemented
+**Options considered**
 
-### Authentication & Security
+| Option | Verdict |
+| --- | --- |
+| `useEffect` + `useState` per component | Prone to race conditions (a slow older request overwriting a newer one), duplicate calls and inconsistent loading and error states. |
+| Redux Toolkit / RTK Query | Capable, but adds store, slice and middleware boilerplate for state that is almost entirely server-owned. |
+| **TanStack Query v5 (chosen)** | Built specifically for server state: caching, deduplication, background refetching and invalidation. |
 
--   **Dual-token authentication:** Handles access and refresh tokens.
--   **Silent refresh:** Refreshes expired access tokens in the
-    background and retries failed requests.
--   **Protected routes:** `proxy.ts` prevents unauthenticated access to
-    `/dashboard`.
--   **Role-based UI:** The UI conditionally displays admin-only actions
-    (create, edit, and delete), while the backend remains responsible
-    for enforcing authorization.
+**Decision.** Use `@tanstack/react-query` for all reads and writes.
 
-### Doctor Management
+**How it is used**
 
--   **List & Search:** View doctors with case-insensitive search.
--   **Pagination:** Navigate large datasets efficiently.
--   **CRUD:** Admins can create, update, and delete doctor records.
--   **Patient Routing:** Navigate to a dedicated patient list for a
-    selected doctor.
--   **Add Patient:** Add a patient directly from a doctor's page.
+- **Pagination and search** use query keys that include the page and search term, so each combination is cached separately, and `placeholderData: keepPreviousData` keeps the old page visible while the next one loads.
+- **Cross-screen consistency** comes from invalidation. Creating a patient invalidates `["patients"]`, `["doctors"]` (patient counts) and `["dashboard"]` (stat cards and charts), so every screen refreshes without a manual reload.
+- **Mutation state** (`isPending`, `error`) drives button spinners, inline error messages and the "working" state of the delete confirmation dialog.
 
-### Patient Management
+**Trade-offs.** It adds bundle weight and a learning curve around query keys and invalidation. In return it removes a large amount of hand-written loading and caching code.
 
--   **Global Patient List:** View patients across all doctors.
--   **Filtering:** Filter by condition and search by patient name.
--   **CRUD:** Edit and delete patient records.
--   **Contextual Creation:** Create a patient globally by selecting a
-    doctor, or directly from a doctor's page.
+---
 
-### Dashboard Analytics
+## ✨ Core Features
 
--   **Stat Cards:** Total doctors, total patients, average patients per
-    doctor, and 30-day new-patient growth.
--   **Patients per Doctor:** Bar chart showing the doctors with the most
-    patients.
--   **Condition Distribution:** Donut/pie chart showing common patient
-    conditions.
--   **Registration Timeline:** Area chart showing patient registrations
-    over the last 30 days.
--   **Doctor Specializations:** Bar chart showing doctors by
-    specialization.
+### Authentication & security
 
-------------------------------------------------------------------------
+- **Dual-token authentication** with a short-lived access token and a refresh token.
+- **Silent refresh.** Expired tokens are refreshed in the background and failed requests are retried.
+- **Protected routes.** `proxy.ts` blocks unauthenticated access to `/dashboard`.
+- **Role-based UI.** Admin-only actions (create, edit, delete) are shown conditionally. The backend still enforces authorisation.
+
+### Doctor management
+
+- Case-insensitive search, pagination and a responsive table (cards on mobile).
+- Create, edit and delete doctors in a modal form (specialization is a dropdown).
+- Open a dedicated patient list for any doctor and add patients from there.
+- Delete uses a confirmation dialog that shows progress and any server error.
+
+### Patient management
+
+- Global patient list with search and pagination.
+- Create a patient globally (choose a doctor) or from a doctor's page.
+- Edit and delete patients, with inline form validation.
+
+### Dashboard analytics
+
+- **Stat cards** with animated numbers, mini trend lines and growth badges: total doctors, total patients, average patients per doctor and 30-day new patients.
+- **Smart insights** generated from the data: intake trend, top condition, workload alerts, busiest day and thin specialization coverage.
+- **Range switcher** (7 / 30 / 90 days) and a manual refresh button.
+- **Patients per doctor** bar chart, coloured by workload compared with the average.
+- **Condition distribution** donut with interactive focus.
+- **Registration timeline** area chart with a 7-day moving average.
+- **Doctors per specialization** bar chart.
+
+### Responsive design
+
+- Desktop table layouts become card layouts on phones.
+- Modals become bottom sheets on small screens.
+
+---
 
 ## 📂 Project Structure
 
-``` text
+```text
 src/
 ├── app/
 │   ├── (auth)/
@@ -251,7 +242,7 @@ src/
 │   └── page.tsx              # Root redirect (/ -> /dashboard)
 ├── components/
 │   ├── layout/               # Sidebar and topbar
-│   └── ui/                   # Reusable UI components
+│   └── ui/                   # Modal, ConfirmDialog and shared UI
 ├── features/
 │   ├── auth/                 # AuthProvider, useAuth, login form
 │   ├── dashboard/            # Dashboard queries
@@ -264,55 +255,56 @@ src/
 └── proxy.ts                  # Route protection
 ```
 
-------------------------------------------------------------------------
+---
 
-## 📸 Visual Evidence (Screenshots)
+## 📸 Visual Evidence
 
-After completing the project, capture screenshots and save them in
-`public/screenshots/`. Update the paths below if your filenames or
-locations differ.
+Screenshots live in `public/screenshots/`. Each screen is shown at desktop width (1440 px) and phone width (390 px).
 
-  View                  Screenshot
-  --------------------- ------------------------------------
-  Dashboard (Desktop)   `public/screenshots/dashboard.png`
-  Doctors List          `public/screenshots/doctors.png`
-  Patients List         `public/screenshots/patients.png`
-  Mobile View           `public/screenshots/mobile.png`
+### Login
 
-------------------------------------------------------------------------
+| Desktop | Mobile |
+| --- | --- |
+| ![Login – desktop](public/screenshots/login-desktop.png) | ![Login – mobile](public/screenshots/login-mobile.png) |
+
+### Dashboard
+
+| Desktop | Mobile |
+| --- | --- |
+| ![Dashboard – desktop](public/screenshots/dashboard-desktop.png) | ![Dashboard – mobile](public/screenshots/dashboard-mobile.png) |
+
+### Doctors
+
+| Desktop | Mobile |
+| --- | --- |
+| ![Doctors – desktop](public/screenshots/doctors-desktop.png) | ![Doctors – mobile](public/screenshots/doctors-mobile.png) |
+
+### Patients
+
+| Desktop | Mobile |
+| --- | --- |
+| ![Patients – desktop](public/screenshots/patients-desktop.png) | ![Patients – mobile](public/screenshots/patients-mobile.png) |
+
+### Add Doctor modal
+
+| Desktop | Mobile |
+| --- | --- |
+| ![Add doctor – desktop](public/screenshots/add-doctor-desktop.png) | ![Add doctor – mobile](public/screenshots/add-doctor-mobile.png) |
+
+---
 
 ## 📜 Available Scripts
 
-  -----------------------------------------------------------------------
-  Command                             Description
-  ----------------------------------- -----------------------------------
-  `yarn dev`                          Runs the development server with
-                                      Turbopack.
+| Command | Description |
+| --- | --- |
+| `yarn dev` | Runs the development server with Turbopack. |
+| `yarn build` | Builds the application for production. |
+| `yarn start` | Runs the production build. |
+| `yarn lint` | Runs ESLint. |
+| `yarn typecheck` | Runs the TypeScript compiler check (`tsc --noEmit`). |
+| `yarn format` | Formats code using Prettier. |
 
-  `yarn build`                        Builds the application for
-                                      production.
-
-  `yarn start`                        Runs the production build.
-
-  `yarn lint`                         Runs ESLint.
-
-  `yarn typecheck`                    Runs the TypeScript compiler check
-                                      (`tsc --noEmit`).
-
-  `yarn format`                       Formats code using Prettier.
-  -----------------------------------------------------------------------
-
-------------------------------------------------------------------------
-
-## 🔒 Environment Variables Example (`.env.example`)
-
-``` env
-# The API base URL. Requests are routed through the Next.js rewrite proxy.
-# This helps avoid browser-side CORS issues.
-NEXT_PUBLIC_API_BASE_URL=/api/v1
-```
-
-------------------------------------------------------------------------
+---
 
 ## 📄 License
 
