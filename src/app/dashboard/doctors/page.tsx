@@ -1,3 +1,4 @@
+// src/app/dashboard/doctors/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -5,6 +6,7 @@ import Link from "next/link";
 import { useDoctors, useDeleteDoctor } from "@/features/doctors/use-doctors";
 import { Modal } from "@/components/ui/modal";
 import { DoctorForm } from "@/features/doctors/doctor-form";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import type { Doctor } from "@/lib/types";
 
 const LIMIT = 10;
@@ -126,21 +128,31 @@ export default function DoctorsPage() {
 
   const { data, isLoading } = useDoctors({ page, limit: LIMIT, search });
   const deleteMutation = useDeleteDoctor();
+  const { ask, dialog } = useConfirm();
 
   const rows: Doctor[] = data?.data ?? [];
-  const hasNext = rows.length === LIMIT; // no total in the response shape we know of
-  const deletingId = deleteMutation.isPending ? (deleteMutation.variables as string) : null;
+  const hasNext = rows.length === LIMIT;
+  const deletingId = deleteMutation.isPending
+    ? (deleteMutation.variables as string)
+    : null;
 
-  const handleDelete = (id: string) => {
-    if (confirm("Delete this doctor? All their patients will also be deleted.")) {
-      deleteMutation.mutate(id);
-    }
+  const handleDelete = (doctor: Doctor) => {
+    ask({
+      title: "Delete this doctor?",
+      itemName: doctor.name,
+      description:
+        "All their patients will also be deleted. Their record will be permanently removed. This can't be undone.",
+      confirmLabel: "Delete doctor",
+      tone: "danger",
+      onConfirm: () => deleteMutation.mutateAsync(doctor.id),
+    });
   };
 
   const openAdd = () => {
     setSelectedDoctor(null);
     setIsModalOpen(true);
   };
+
   const openEdit = (d: Doctor) => {
     setSelectedDoctor(d);
     setIsModalOpen(true);
@@ -148,10 +160,15 @@ export default function DoctorsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Confirm Dialog */}
+      {dialog}
+
       {/* Header */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-teal-700">Care team</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-teal-700">
+            Care team
+          </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
             Doctors
           </h1>
@@ -188,7 +205,7 @@ export default function DoctorsPage() {
       {/* Content */}
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
         {/* Desktop / tablet table */}
-        <div className="hidden md:block">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/80 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -208,9 +225,15 @@ export default function DoctorsPage() {
                         <Skeleton className="h-4 w-36" />
                       </div>
                     </td>
-                    <td className="px-6 py-4"><Skeleton className="h-6 w-28 rounded-full" /></td>
-                    <td className="px-6 py-4"><Skeleton className="h-4 w-40" /></td>
-                    <td className="px-6 py-4"><Skeleton className="ml-auto h-8 w-48" /></td>
+                    <td className="px-6 py-4">
+                      <Skeleton className="h-6 w-28 rounded-full" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <Skeleton className="h-4 w-40" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <Skeleton className="ml-auto h-8 w-48" />
+                    </td>
                   </tr>
                 ))}
 
@@ -222,7 +245,9 @@ export default function DoctorsPage() {
                       <span className="font-medium text-slate-900">{d.name}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4"><Badge>{d.specialization}</Badge></td>
+                  <td className="px-6 py-4">
+                    <Badge>{d.specialization}</Badge>
+                  </td>
                   <td className="px-6 py-4 text-slate-600">{d.hospital}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-1">
@@ -239,7 +264,7 @@ export default function DoctorsPage() {
                         <EditIcon className="h-4 w-4" /> Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(d.id)}
+                        onClick={() => handleDelete(d)}
                         disabled={deletingId === d.id}
                         className={`${actionBase} text-red-600 hover:bg-red-50 focus-visible:ring-red-500`}
                       >
@@ -276,7 +301,9 @@ export default function DoctorsPage() {
                 <Avatar name={d.name} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-slate-900">{d.name}</p>
-                  <div className="mt-1.5"><Badge>{d.specialization}</Badge></div>
+                  <div className="mt-1.5">
+                    <Badge>{d.specialization}</Badge>
+                  </div>
                   <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
                     <BuildingIcon className="h-4 w-4 shrink-0 text-slate-400" />
                     <span className="truncate">{d.hospital}</span>
@@ -297,7 +324,7 @@ export default function DoctorsPage() {
                   <EditIcon className="h-4 w-4" /> Edit
                 </button>
                 <button
-                  onClick={() => handleDelete(d.id)}
+                  onClick={() => handleDelete(d)}
                   disabled={deletingId === d.id}
                   className={`${actionBase} justify-center bg-red-50 py-2.5 text-red-600 focus-visible:ring-red-500`}
                 >

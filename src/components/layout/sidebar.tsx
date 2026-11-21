@@ -10,15 +10,18 @@ const links = [
   { href: "/dashboard/patients", label: "Patients" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-56 border-r bg-card p-4">
-      <p className="mb-6 text-lg font-semibold">Doctor Tracker</p>
-      <nav className="space-y-1">
+    <aside className="flex h-full w-64 flex-col border-r bg-card p-4">
+      <div className="mb-8">
+        <p className="text-lg font-bold tracking-tight">Doctor Tracker</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Clinical Dashboard</p>
+      </div>
+
+      <nav className="space-y-1.5">
         {links.map((l) => {
-          // Use startsWith so /dashboard/doctors/123 still highlights "Doctors"
           const active =
             l.href === "/dashboard"
               ? pathname === "/dashboard"
@@ -28,9 +31,10 @@ export function Sidebar() {
             <Link
               key={l.href}
               href={l.href}
-              className={`block rounded-md px-3 py-2 text-sm transition-colors ${
+              onClick={onLinkClick}
+              className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                 active
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >

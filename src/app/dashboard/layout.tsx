@@ -1,3 +1,4 @@
+// src/app/dashboard/layout.tsx
 "use client";
 
 import { Suspense, useEffect } from "react";
@@ -12,11 +13,12 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated } = useAuth();
 
-  // Redirect if truly logged out, but never block the UI from rendering.
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isAuthenticated) {
-        const hasCookie = document.cookie.includes("refreshToken") || document.cookie.includes("session");
+        const hasCookie =
+          document.cookie.includes("refreshToken") ||
+          document.cookie.includes("session");
         if (!hasCookie) {
           window.location.href = "/login";
         }
@@ -26,14 +28,20 @@ export default function DashboardLayout({
   }, [isAuthenticated]);
 
   return (
-    <div className="flex min-h-screen">
-      {/* Suspense is required by Next.js 16 to allow usePathname in Sidebar during build */}
-      <Suspense fallback={<div className="w-56 border-r bg-card p-4" />}>
-        <Sidebar />
-      </Suspense>
-      <div className="flex flex-1 flex-col">
+    <div className="flex min-h-screen bg-background overflow-x-hidden">
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block shrink-0">
+        <Suspense fallback={<div className="h-full w-64 border-r bg-card p-4" />}>
+          <Sidebar />
+        </Suspense>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col min-w-0">
         <Topbar />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 overflow-x-hidden p-3 sm:p-4 md:p-6">
+          {children}
+        </main>
       </div>
     </div>
   );

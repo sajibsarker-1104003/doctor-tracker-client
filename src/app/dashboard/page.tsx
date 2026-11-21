@@ -1,3 +1,4 @@
+// src/app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -53,7 +54,6 @@ function truncate(v: string, n = 14) {
 
 const sum = (a: number[]) => a.reduce((s, x) => s + x, 0);
 
-/** Compare the second half of a series with the first half. */
 function halfTrend(series: number[]) {
   if (series.length < 4) return null;
   const half = Math.floor(series.length / 2);
@@ -63,7 +63,6 @@ function halfTrend(series: number[]) {
   return { pct, prev, cur, half };
 }
 
-/** Animated count-up (respects reduced motion). */
 function useCountUp(target: number | null, duration = 900) {
   const [v, setV] = useState(0);
   const from = useRef(0);
@@ -171,8 +170,14 @@ function Skeleton({ className = "" }: { className?: string }) {
 const TONES = {
   teal: { grad: "from-teal-500 to-teal-700 shadow-teal-600/25", spark: "#0d9488" },
   cyan: { grad: "from-cyan-500 to-sky-600 shadow-cyan-600/25", spark: "#0891b2" },
-  emerald: { grad: "from-emerald-500 to-emerald-700 shadow-emerald-600/25", spark: "#059669" },
-  indigo: { grad: "from-indigo-500 to-violet-600 shadow-indigo-600/25", spark: "#6366f1" },
+  emerald: {
+    grad: "from-emerald-500 to-emerald-700 shadow-emerald-600/25",
+    spark: "#059669",
+  },
+  indigo: {
+    grad: "from-indigo-500 to-violet-600 shadow-indigo-600/25",
+    spark: "#6366f1",
+  },
 } as const;
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
@@ -183,8 +188,13 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   const max = Math.max(...data);
   const min = Math.min(...data);
   const rng = max - min || 1;
-  const pts = data.map((v, i) => [(i / (data.length - 1)) * w, h - 3 - ((v - min) / rng) * (h - 6)]);
-  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
+  const pts = data.map((v, i) => [
+    (i / (data.length - 1)) * w,
+    h - 3 - ((v - min) / rng) * (h - 6),
+  ]);
+  const line = pts
+    .map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`)
+    .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="h-8 w-24" aria-hidden>
       <defs>
@@ -194,7 +204,14 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
         </linearGradient>
       </defs>
       <path d={`${line} L${w} ${h} L0 ${h} Z`} fill={`url(#${id})`} />
-      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={line}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -251,7 +268,7 @@ function StatCard({
         : Math.round(animated).toLocaleString();
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/5">
+    <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/5">
       <div
         className={`pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br opacity-[0.08] transition group-hover:opacity-[0.14] ${TONES[tone].grad}`}
       />
@@ -262,7 +279,7 @@ function StatCard({
             <Skeleton className="mt-3 h-8 w-20" />
           ) : (
             <div className="mt-2 flex items-center gap-2.5">
-              <p className="truncate text-3xl font-semibold tabular-nums tracking-tight text-slate-900">
+              <p className="truncate text-2xl sm:text-3xl font-semibold tabular-nums tracking-tight text-slate-900">
                 {text}
               </p>
               {pct !== undefined && <DeltaBadge pct={pct} title={pctTitle} />}
@@ -271,7 +288,7 @@ function StatCard({
           {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
         </div>
         <span
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg ${TONES[tone].grad}`}
+          className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg ${TONES[tone].grad}`}
         >
           {icon}
         </span>
@@ -306,10 +323,10 @@ function ChartCard({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 ${className}`}
+      className={`rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 md:p-6 shadow-sm overflow-hidden ${className}`}
     >
-      <header className="mb-5 flex items-start justify-between gap-3">
-        <div>
+      <header className="mb-4 sm:mb-5 flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
           {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
         </div>
@@ -335,7 +352,7 @@ function ChartCard({
           No data to display yet.
         </div>
       ) : (
-        children
+        <div className="min-w-0 overflow-hidden">{children}</div>
       )}
     </section>
   );
@@ -343,7 +360,12 @@ function ChartCard({
 
 type TipProps = {
   active?: boolean;
-  payload?: Array<{ value?: number | string; name?: string; color?: string; stroke?: string }>;
+  payload?: Array<{
+    value?: number | string;
+    name?: string;
+    color?: string;
+    stroke?: string;
+  }>;
   label?: string | number;
   labelFormatter?: (v: string) => string;
   unit?: string;
@@ -351,7 +373,12 @@ type TipProps = {
 
 function ChartTooltip({ active, payload, label, labelFormatter, unit = "" }: TipProps) {
   if (!active || !payload?.length) return null;
-  const title = label !== undefined ? (labelFormatter ? labelFormatter(String(label)) : String(label)) : "";
+  const title =
+    label !== undefined
+      ? labelFormatter
+        ? labelFormatter(String(label))
+        : String(label)
+      : "";
   return (
     <div className="rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
       {title && <p className="font-medium text-slate-700">{title}</p>}
@@ -359,7 +386,10 @@ function ChartTooltip({ active, payload, label, labelFormatter, unit = "" }: Tip
         .filter((p) => p.value !== null && p.value !== undefined)
         .map((p, i) => (
           <p key={i} className="mt-0.5 flex items-center gap-1.5 text-slate-500">
-            <span className="h-2 w-2 rounded-full" style={{ background: p.color ?? p.stroke }} />
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: p.color ?? p.stroke }}
+            />
             <span className="font-semibold text-slate-900">
               {typeof p.value === "number" ? Number(p.value.toFixed(1)) : p.value}
             </span>
@@ -370,7 +400,6 @@ function ChartTooltip({ active, payload, label, labelFormatter, unit = "" }: Tip
   );
 }
 
-/* Horizontal bars handle long names far better on small screens. */
 function HBarChart({
   rows,
   nameKey,
@@ -386,22 +415,32 @@ function HBarChart({
 }) {
   const height = Math.max(220, rows.length * 40 + 20);
   return (
-    <div className="w-full" style={{ height, minWidth: 0 }}>
+    <div className="w-full min-w-0" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={rows} layout="vertical" margin={{ left: 0, right: 16, top: 0, bottom: 0 }}>
+        <BarChart
+          data={rows}
+          layout="vertical"
+          margin={{ left: 0, right: 8, top: 0, bottom: 0 }}
+        >
           <CartesianGrid horizontal={false} stroke={GRID} strokeDasharray="3 3" />
-          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: AXIS }} axisLine={false} tickLine={false} />
+          <XAxis
+            type="number"
+            allowDecimals={false}
+            tick={{ fontSize: 11, fill: AXIS }}
+            axisLine={false}
+            tickLine={false}
+          />
           <YAxis
             type="category"
             dataKey={nameKey}
-            width={96}
-            tick={{ fontSize: 12, fill: "#475569" }}
-            tickFormatter={(v: string) => truncate(v, 14)}
+            width={80}
+            tick={{ fontSize: 11, fill: "#475569" }}
+            tickFormatter={(v: string) => truncate(v, 12)}
             axisLine={false}
             tickLine={false}
           />
           <Tooltip cursor={{ fill: "#f1f5f9" }} content={<ChartTooltip unit={unit} />} />
-          <Bar dataKey="count" fill={color} radius={[0, 8, 8, 0]} barSize={18}>
+          <Bar dataKey="count" fill={color} radius={[0, 8, 8, 0]} barSize={16}>
             {colorFor && rows.map((r, i) => <Cell key={i} fill={colorFor(r)} />)}
           </Bar>
         </BarChart>
@@ -435,7 +474,6 @@ function InsightCard({ i }: { i: Insight }) {
 /* ---------- Page ---------- */
 
 export default function DashboardPage() {
-  // Client-only date range. Starts empty so SSR/prerender doesn't see new Date().
   const [days, setDays] = useState<(typeof RANGES)[number]>(30);
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [activeCond, setActiveCond] = useState<number | null>(null);
@@ -454,25 +492,27 @@ export default function DashboardPage() {
   const conditions = useConditions();
   const specializations = useSpecializations();
 
-  // Normalize every list-shaped response into a real array.
   const perDoctorRows = asArray<{ doctorName: string; count: number }>(perDoctor.data);
-  const timelineRows = asArray<{ bucket: string; patients: number; doctors: number }>(timeline.data);
+  const timelineRows = asArray<{ bucket: string; patients: number; doctors: number }>(
+    timeline.data
+  );
   const conditionRows = asArray<{ condition: string; count: number }>(conditions.data);
-  const specializationRows = asArray<{ specialization: string; count: number }>(specializations.data);
+  const specializationRows = asArray<{ specialization: string; count: number }>(
+    specializations.data
+  );
 
   if (summary.isError) console.error("[dashboard] summary", summary.error);
   if (perDoctor.isError) console.error("[dashboard] perDoctor", perDoctor.error);
   if (timeline.isError) console.error("[dashboard] timeline", timeline.error);
   if (conditions.isError) console.error("[dashboard] conditions", conditions.error);
-  if (specializations.isError) console.error("[dashboard] specializations", specializations.error);
+  if (specializations.isError)
+    console.error("[dashboard] specializations", specializations.error);
 
   const queries = [summary, perDoctor, timeline, conditions, specializations];
   const anyError = queries.some((q) => q.isError);
   const isFetching = queries.some((q) => q.isFetching);
   const updatedAt = Math.max(...queries.map((q) => q.dataUpdatedAt ?? 0));
   const refreshAll = () => queries.forEach((q) => q.refetch());
-
-  /* ----- Derived data ----- */
 
   const conditionTotal = sum(conditionRows.map((r) => Number(r.count) || 0));
   const avgLoad = summary.data?.avgPatientsPerDoctor ?? 0;
@@ -484,26 +524,26 @@ export default function DashboardPage() {
   const totalPatients: number | null = summary.data?.totalPatients ?? null;
   const totalDoctors: number | null = summary.data?.totalDoctors ?? null;
 
-  // Running totals that end at today's real total (so the sparkline is truthful).
   function runningTotal(total: number | null, series: number[]) {
     if (total == null || series.length < 2) return [];
     let run = total - sum(series);
     return series.map((n) => (run += n));
   }
   const patientsSpark = runningTotal(totalPatients, newPatients);
-  const doctorsSpark = newDoctors.some((n) => n > 0) ? runningTotal(totalDoctors, newDoctors) : [];
+  const doctorsSpark = newDoctors.some((n) => n > 0)
+    ? runningTotal(totalDoctors, newDoctors)
+    : [];
 
   const windowNew = sum(newPatients);
   const growthBase = totalPatients != null ? totalPatients - windowNew : 0;
-  const growthPct = totalPatients != null && growthBase > 0 ? (windowNew / growthBase) * 100 : null;
+  const growthPct =
+    totalPatients != null && growthBase > 0 ? (windowNew / growthBase) * 100 : null;
 
-  // 7-point moving average for the timeline.
   const chartRows = timelineRows.map((r, i) => ({
     ...r,
     average: i >= 6 ? sum(newPatients.slice(i - 6, i + 1)) / 7 : null,
   }));
 
-  // Workload colouring relative to the average.
   const loadColor = (row: Record<string, unknown>) => {
     const c = Number(row.count) || 0;
     if (avgLoad > 0 && c >= avgLoad * 1.5) return "#f43f5e";
@@ -511,7 +551,6 @@ export default function DashboardPage() {
     return "#0d9488";
   };
 
-  // Smart insights, generated from the data on screen.
   const insights: Insight[] = [];
 
   if (trend && newPatients.length >= 4) {
@@ -567,7 +606,10 @@ export default function DashboardPage() {
   }
 
   const peak = timelineRows.reduce<{ bucket: string; n: number } | null>(
-    (best, r) => ((Number(r.patients) || 0) > (best?.n ?? 0) ? { bucket: r.bucket, n: Number(r.patients) } : best),
+    (best, r) =>
+      (Number(r.patients) || 0) > (best?.n ?? 0)
+        ? { bucket: r.bucket, n: Number(r.patients) }
+        : best,
     null
   );
   if (peak && peak.n > 0) {
@@ -580,7 +622,10 @@ export default function DashboardPage() {
 
   const thin = specializationRows.filter((s) => s.count === 1);
   if (specializationRows.length > 1 && thin.length > 0) {
-    const names = thin.slice(0, 2).map((s) => s.specialization).join(" and ");
+    const names = thin
+      .slice(0, 2)
+      .map((s) => s.specialization)
+      .join(" and ");
     insights.push({
       tone: "warn",
       title: "Thin coverage",
@@ -591,24 +636,25 @@ export default function DashboardPage() {
   const insightsLoading = summary.isLoading || timeline.isLoading || conditions.isLoading;
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-5 sm:space-y-6 md:space-y-8 max-w-full overflow-x-hidden">
       {/* Header */}
-      <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-700 via-teal-800 to-cyan-900 p-6 text-white shadow-lg shadow-teal-900/10 sm:p-8">
+      <header className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-teal-700 via-teal-800 to-cyan-900 p-5 sm:p-6 md:p-8 text-white shadow-lg shadow-teal-900/10">
         <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-emerald-300/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 left-1/3 h-56 w-56 rounded-full bg-cyan-300/15 blur-3xl" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+        <div className="relative flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-widest text-teal-100/80">
               Clinical overview
             </p>
-            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-3xl">Dashboard</h1>
+            <h1 className="mt-1.5 text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
+              Dashboard
+            </h1>
             <p className="mt-1.5 max-w-md text-sm text-teal-50/80">
               Care team capacity, patient intake and condition trends at a glance.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            {/* Range switcher */}
             <div
               role="radiogroup"
               aria-label="Date range"
@@ -620,8 +666,10 @@ export default function DashboardPage() {
                   role="radio"
                   aria-checked={days === d}
                   onClick={() => setDays(d)}
-                  className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                    days === d ? "bg-white text-teal-800 shadow-sm" : "text-white/80 hover:text-white"
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                    days === d
+                      ? "bg-white text-teal-800 shadow-sm"
+                      : "text-white/80 hover:text-white"
                   }`}
                 >
                   {d}D
@@ -638,7 +686,11 @@ export default function DashboardPage() {
               {isFetching ? "Refreshing…" : "Refresh"}
               {!isFetching && updatedAt > 0 && (
                 <span className="hidden text-xs text-teal-100/80 sm:inline">
-                  · {new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  ·{" "}
+                  {new Date(updatedAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
               )}
             </button>
@@ -657,7 +709,7 @@ export default function DashboardPage() {
       )}
 
       {/* KPIs */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total Doctors"
           value={totalDoctors}
@@ -707,7 +759,9 @@ export default function DashboardPage() {
             <h2 id="insights-title" className="text-base font-semibold text-slate-900">
               Smart insights
             </h2>
-            <p className="text-xs text-slate-500">Generated automatically from your latest data</p>
+            <p className="text-xs text-slate-500">
+              Generated automatically from your latest data
+            </p>
           </div>
         </div>
 
@@ -731,7 +785,7 @@ export default function DashboardPage() {
       </section>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-2">
         <ChartCard
           title="Top Doctors by Patients"
           subtitle="Colour shows load compared with the average"
@@ -766,16 +820,16 @@ export default function DashboardPage() {
           error={conditions.isError}
           empty={conditionRows.length === 0}
         >
-          <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-6">
-            <div className="relative h-52 w-52 shrink-0" style={{ minWidth: 0 }}>
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-6 min-w-0">
+            <div className="relative h-40 w-40 sm:h-48 sm:w-48 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={conditionRows}
                     dataKey="count"
                     nameKey="condition"
-                    innerRadius={62}
-                    outerRadius={92}
+                    innerRadius={48}
+                    outerRadius={72}
                     paddingAngle={2}
                     cornerRadius={6}
                     stroke="none"
@@ -792,11 +846,13 @@ export default function DashboardPage() {
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-                <span className="text-2xl font-semibold tabular-nums text-slate-900">
-                  {activeCond !== null ? conditionRows[activeCond]?.count : conditionTotal}
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+                <span className="text-lg sm:text-xl font-semibold tabular-nums text-slate-900">
+                  {activeCond !== null
+                    ? conditionRows[activeCond]?.count
+                    : conditionTotal}
                 </span>
-                <span className="max-w-full truncate text-xs text-slate-500">
+                <span className="max-w-full truncate text-[11px] text-slate-500">
                   {activeCond !== null ? conditionRows[activeCond]?.condition : "total"}
                 </span>
               </div>
@@ -804,13 +860,15 @@ export default function DashboardPage() {
 
             <ul className="w-full min-w-0 flex-1 space-y-1">
               {conditionRows.slice(0, 6).map((r, i) => {
-                const pct = conditionTotal ? Math.round((r.count / conditionTotal) * 100) : 0;
+                const pct = conditionTotal
+                  ? Math.round((r.count / conditionTotal) * 100)
+                  : 0;
                 return (
                   <li
                     key={r.condition}
                     onMouseEnter={() => setActiveCond(i)}
                     onMouseLeave={() => setActiveCond(null)}
-                    className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition ${
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition ${
                       activeCond === i ? "bg-slate-50" : ""
                     } ${activeCond !== null && activeCond !== i ? "opacity-50" : ""}`}
                   >
@@ -818,9 +876,15 @@ export default function DashboardPage() {
                       className="h-2.5 w-2.5 shrink-0 rounded-full"
                       style={{ background: COLORS[i % COLORS.length] }}
                     />
-                    <span className="min-w-0 flex-1 truncate text-slate-700">{r.condition}</span>
-                    <span className="font-medium tabular-nums text-slate-900">{r.count}</span>
-                    <span className="w-9 text-right text-xs tabular-nums text-slate-400">{pct}%</span>
+                    <span className="min-w-0 flex-1 truncate text-slate-700">
+                      {r.condition}
+                    </span>
+                    <span className="font-medium tabular-nums text-slate-900">
+                      {r.count}
+                    </span>
+                    <span className="w-8 text-right text-xs tabular-nums text-slate-400">
+                      {pct}%
+                    </span>
                   </li>
                 );
               })}
@@ -846,9 +910,12 @@ export default function DashboardPage() {
           error={timeline.isError}
           empty={timelineRows.length === 0}
         >
-          <div className="h-64 w-full sm:h-72" style={{ minWidth: 0 }}>
+          <div className="h-56 sm:h-64 md:h-72 w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartRows} margin={{ left: -16, right: 8, top: 8, bottom: 0 }}>
+              <ComposedChart
+                data={chartRows}
+                margin={{ left: -20, right: 4, top: 8, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="patientsFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#0d9488" stopOpacity={0.35} />
@@ -859,12 +926,18 @@ export default function DashboardPage() {
                 <XAxis
                   dataKey="bucket"
                   tickFormatter={shortDate}
-                  tick={{ fontSize: 11, fill: AXIS }}
+                  tick={{ fontSize: 10, fill: AXIS }}
                   axisLine={false}
                   tickLine={false}
-                  minTickGap={24}
+                  minTickGap={20}
                 />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: AXIS }} axisLine={false} tickLine={false} />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 10, fill: AXIS }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={30}
+                />
                 <Tooltip
                   cursor={{ stroke: "#0d9488", strokeOpacity: 0.25 }}
                   content={<ChartTooltip labelFormatter={shortDate} />}
@@ -876,7 +949,7 @@ export default function DashboardPage() {
                   stroke="#0d9488"
                   strokeWidth={2.5}
                   fill="url(#patientsFill)"
-                  activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
+                  activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
                 />
                 <Line
                   type="monotone"
@@ -901,7 +974,12 @@ export default function DashboardPage() {
           error={specializations.isError}
           empty={specializationRows.length === 0}
         >
-          <HBarChart rows={specializationRows} nameKey="specialization" color="#06b6d4" unit="doctors" />
+          <HBarChart
+            rows={specializationRows}
+            nameKey="specialization"
+            color="#06b6d4"
+            unit="doctors"
+          />
         </ChartCard>
       </div>
     </div>
