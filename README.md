@@ -4,6 +4,8 @@
 
 Doctor Tracker is a secure administrative dashboard for managing doctors and their patients. Built with the Next.js App Router, it gives administrators a fast, responsive interface to create, edit and organise records, explore analytics (patient intake trends, condition distribution, doctor workload) and stay signed in safely through a JWT + refresh-token flow. A server-side proxy keeps all API traffic on a single origin, and TanStack Query keeps every list, count and chart in sync without full page reloads.
 
+Live FE url : https://doctor-tracker-client.onrender.com/l
+
 ---
 
 ## 🚀 Tech Stack
